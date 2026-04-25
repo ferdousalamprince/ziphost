@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZipHost — Deploy in seconds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080810;
+      --surface: #0d0d1a;
+      --surface2: #111120;
+      --border: #1e1e30;
+      --border2: #252535;
+      --accent: #6ee7b7;
+      --accent2: #818cf8;
+      --danger: #f87171;
+      --text: #e2e2f0;
+      --muted: #4a4a6a;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Glow blobs */
+    .blob1, .blob2 {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); pointer-events: none; z-index: 0;
+    }
+    .blob1 { width: 500px; height: 500px; background: #6ee7b710; top: -100px; right: -100px; }
+    .blob2 { width: 400px; height: 400px; background: #818cf808; bottom: -100px; left: -100px; }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 780px; margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 52px;
+      animation: fadeUp .5s ease both;
+    }
+    .logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .logo-hex {
+      font-size: 30px; color: var(--accent);
+      text-shadow: 0 0 24px var(--accent);
+    }
+    .logo-text {
+      font-family: var(--mono);
+      font-size: 24px; font-weight: 700;
+      letter-spacing: 4px; color: #fff;
+    }
+    .tagline {
+      color: var(--muted); font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Drop Zone ── */
+    .dropzone {
+      border: 1.5px dashed var(--border2);
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface);
+      transition: all .25s ease;
+      margin-bottom: 32px;
+      animation: fadeUp .5s .1s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .dropzone::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 0%, var(--accent)08, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .dropzone.active {
+      border-color: var(--accent);
+      background: #0f1a16;
+      box-shadow: 0 0 50px var(--accent)15;
+    }
+    .dropzone.active::after { opacity: 1; }
+
+    .drop-icon {
+      font-size: 52px; line-height: 1;
+      margin-bottom: 16px;
+      color: var(--accent);
+      text-shadow: 0 0 30px var(--accent)80;
+      transition: transform .2s;
+      display: block;
+    }
+    .dropzone.active .drop-icon { transform: translateY(-4px) scale(1.1); }
+
+    .drop-title {
+      font-size: 20px; font-weight: 700;
+      color: var(--text); margin-bottom: 8px;
+    }
+    .drop-sub {
+      font-size: 13px; color: var(--muted); margin-bottom: 20px;
+    }
+    .drop-badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 99px;
+      padding: 4px 16px;
+      font-family: var(--mono);
+      font-size: 11px; color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      display: none;
+      flex-direction: column; align-items: center; gap: 12px;
+      padding: 20px;
+    }
+    .progress-wrap.show { display: flex; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    .progress-text {
+      font-family: var(--mono);
+      font-size: 13px; color: var(--accent);
+      animation: pulse 1.5s ease infinite;
+    }
+
+    /* ── Result Card ── */
+    .result-card {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 32px;
+      animation: fadeUp .4s ease both;
+    }
+    .result-card.show { display: block; }
+
+    .result-header {
+      background: #0a1210;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulse 2s ease infinite;
+    }
+    .result-label {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--accent); letter-spacing: 2px;
+    }
+    .result-id {
+      margin-left: auto;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--muted);
+    }
+
+    .result-body { padding: 20px; }
+
+    .url-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .url-text {
+      font-family: var(--mono); font-size: 13px;
+      color: var(--accent); flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .copy-btn {
+      background: var(--accent)15;
+      border: 1px solid var(--accent)40;
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px; cursor: pointer;
+      font-family: var(--sans);
+      transition: all .2s; white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--accent)25; }
+
+    .open-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent);
+      color: #050a08;
+      border: none; border-radius: 10px;
+      padding: 11px 22px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: var(--sans);
+      transition: all .2s; text-decoration: none;
+      margin-bottom: 16px;
+    }
+    .open-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+    .file-pills {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .file-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-family: var(--mono); font-size: 10px;
+      color: var(--muted);
+    }
+    .file-section-title {
+      font-size: 11px; color: var(--muted);
+      font-family: var(--mono); letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    /* ── Error ── */
+    .error-card {
+      display: none;
+      background: #140808;
+      border: 1px solid #3a1010;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .error-card.show { display: block; }
+    .error-icon { font-size: 32px; margin-bottom: 8px; }
+    .error-msg {
+      font-family: var(--mono); font-size: 13px;
+      color: var(--danger);
+    }
+
+    /* ── Deploy History ── */
+    .history-section {
+      animation: fadeUp .5s .2s ease both;
+    }
+    .section-title {
+      font-size: 12px; font-family: var(--mono);
+      color: var(--muted); letter-spacing: 2px;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: var(--border);
+    }
+
+    .history-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+      transition: border-color .2s;
+    }
+    .history-item:hover { border-color: var(--border2); }
+    .h-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .h-id { font-family: var(--mono); font-size: 12px; color: var(--text); }
+    .h-url {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--accent); flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      text-decoration: none;
+    }
+    .h-url:hover { text-decoration: underline; }
+    .h-meta { font-size: 10px; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+    .h-del {
+      background: transparent;
+      border: 1px solid #3a1010;
+      color: var(--danger);
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 10px; cursor: pointer;
+      font-family: var(--mono);
+      opacity: .6; transition: opacity .2s;
+    }
+    .h-del:hover { opacity: 1; }
+
+    .no-history {
+      text-align: center;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); padding: 24px;
+    }
+
+    /* ── New Deploy Btn ── */
+    .new-btn {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px; cursor: pointer;
+      font-family: var(--sans);
+      margin-left: auto; display: block;
+      margin-bottom: 20px;
+      transition: all .2s;
+    }
+    .new-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  </style>
+</head>
+<body>
+  <div class="blob1"></div>
+  <div class="blob2"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <span class="logo-hex">⬡</span>
+        <span class="logo-text">ZIPHOST</span>
+      </div>
+      <p class="tagline">ZIP আপলোড করো — Unique URL পাও — তাৎক্ষণিক Deploy</p>
+    </header>
+
+    <!-- Drop Zone -->
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".zip" style="display:none" />
+
+      <div id="uploadUI">
+        <span class="drop-icon" id="dropIcon">⬆</span>
+        <p class="drop-title">ZIP ফাইল এখানে টানো</p>
+        <p class="drop-sub">অথবা click করে select করো</p>
+        <span class="drop-badge">.zip • max 50MB</span>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="spinner"></div>
+        <p class="progress-text" id="progressText">Upload হচ্ছে...</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-card" id="errorCard">
+      <div class="error-icon">✕</div>
+      <p class="error-msg" id="errorMsg"></p>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard">
+      <div class="result-header">
+        <div class="status-dot"></div>
+        <span class="result-label">DEPLOYED</span>
+        <span class="result-id" id="resultId"></span>
+      </div>
+      <div class="result-body">
+        <div class="url-row">
+          <span class="url-text" id="resultUrl"></span>
+          <button class="copy-btn" id="copyBtn">Copy</button>
+        </div>
+        <a class="open-btn" id="openBtn" href="#" target="_blank">
+          ↗ Live Preview খোলো
+        </a>
+        <p class="file-section-title">DEPLOYED FILES</p>
+        <div class="file-pills" id="filePills"></div>
+      </div>
+    </div>
+
+    <button class="new-btn" id="newBtn" style="display:none">+ নতুন Deploy</button>
+
+    <!-- History -->
+    <div class="history-section">
+      <p class="section-title">DEPLOY HISTORY</p>
+      <div class="history-list" id="historyList">
+        <p class="no-history">এখনো কোনো deploy নেই।</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:3000";
+
+    const dropzone   = document.getElementById("dropzone");
+    const fileInput  = document.getElementById("fileInput");
+    const uploadUI   = document.getElementById("uploadUI");
+    const progressWrap = document.getElementById("progressWrap");
+    const progressText = document.getElementById("progressText");
+    const errorCard  = document.getElementById("errorCard");
+    const errorMsg   = document.getElementById("errorMsg");
+    const resultCard = document.getElementById("resultCard");
+    const resultId   = document.getElementById("resultId");
+    const resultUrl  = document.getElementById("resultUrl");
+    const copyBtn    = document.getElementById("copyBtn");
+    const openBtn    = document.getElementById("openBtn");
+    const filePills  = document.getElementById("filePills");
+    const historyList= document.getElementById("historyList");
+    const newBtn     = document.getElementById("newBtn");
+    const dropIcon   = document.getElementById("dropIcon");
+
+    // ── Drag & Drop ──
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("active"); dropIcon.textContent = "⬇"; });
+    dropzone.addEventListener("dragleave", () => { dropzone.classList.remove("active"); dropIcon.textContent = "⬆"; });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("active");
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+
+    // ── Upload ──
+    async function handleFile(file) {
+      if (!file.name.endsWith(".zip")) {
+        showError("শুধু .zip file upload করো।");
+        return;
+      }
+
+      showProgress("Upload হচ্ছে...");
+
+      const formData = new FormData();
+      formData.append("zipfile", file);
+
+      try {
+        progressText.textContent = "Extract হচ্ছে...";
+        const res = await fetch(`${API}/upload`, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          showError(data.error || "Something went wrong");
+          return;
+        }
+
+        showResult(data);
+        loadHistory();
+      } catch (err) {
+        showError("Server connect করতে পারছে না। server.js চালু আছে?");
+      }
+    }
+
+    // ── UI States ──
+    function showProgress(msg) {
+      uploadUI.style.display = "none";
+      progressWrap.classList.add("show");
+      progressText.textContent = msg;
+      errorCard.classList.remove("show");
+      resultCard.classList.remove("show");
+      newBtn.style.display = "none";
+    }
+
+    function showError(msg) {
+      uploadUI.style.display = "block";
+      progressWrap.classList.remove("show");
+      errorCard.classList.add("show");
+      errorMsg.textContent = msg;
+      resultCard.classList.remove("show");
+      newBtn.style.display = "none";
+    }
+
+    function showResult(data) {
+      uploadUI.style.display = "none";
+      progressWrap.classList.remove("show");
+      errorCard.classList.remove("show");
+      resultCard.classList.add("show");
+      newBtn.style.display = "block";
+
+      resultId.textContent = `ID: ${data.siteId}`;
+      resultUrl.textContent = data.url;
+      openBtn.href = data.url;
+
+      filePills.innerHTML = data.files
+        .slice(0, 24)
+        .map((f) => `<span class="file-pill">${f}</span>`)
+        .join("") + (data.files.length > 24 ? `<span class="file-pill">+${data.files.length - 24} more</span>` : "");
+
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(data.url);
+        copyBtn.textContent = "✓ Copied!";
+        setTimeout(() => (copyBtn.textContent = "Copy"), 2000);
+      };
+    }
+
+    newBtn.onclick = () => {
+      resultCard.classList.remove("show");
+      errorCard.classList.remove("show");
+      uploadUI.style.display = "block";
+      newBtn.style.display = "none";
+      fileInput.value = "";
+    };
+
+    // ── History ──
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API}/api/sites`);
+        const sites = await res.json();
+
+        if (!sites.length) {
+          historyList.innerHTML = `<p class="no-history">এখনো কোনো deploy নেই।</p>`;
+          return;
+        }
+
+        historyList.innerHTML = sites.map((s) => `
+          <div class="history-item" id="h-${s.siteId}">
+            <div class="h-dot"></div>
+            <span class="h-id">${s.siteId}</span>
+            <a class="h-url" href="${s.url}" target="_blank">${s.url}</a>
+            <span class="h-meta">${s.files} files</span>
+            <button class="h-del" onclick="deleteSite('${s.siteId}')">✕</button>
+          </div>
+        `).join("");
+      } catch {
+        // server offline
+      }
+    }
+
+    async function deleteSite(id) {
+      if (!confirm(`Site ${id} delete করবো?`)) return;
+      try {
+        await fetch(`${API}/api/sites/${id}`, { method: "DELETE" });
+        document.getElementById(`h-${id}`)?.remove();
+        if (!historyList.children.length) {
+          historyList.innerHTML = `<p class="no-history">এখনো কোনো deploy নেই।</p>`;
+        }
+      } catch {}
+    }
+
+    // Initial load
+    loadHistory();
+  </script>
+</body>
+</html>

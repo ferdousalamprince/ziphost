@@ -339,7 +339,19 @@
       to { opacity: 1; transform: none; }
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } } .install-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: var(--sans);
+  transition: all .2s; text-decoration: none;
+  margin-bottom: 16px; margin-left: 8px;
+}
+.install-btn:hover { background: var(--accent)15; }
   </style>
 </head>
 <body>
@@ -393,6 +405,8 @@
         </div>
         <a class="open-btn" id="openBtn" href="#" target="_blank">
           ↗ Live Preview খোলো
+        </a> <a class="install-btn" id="installBtn" href="#" target="_blank">
+  📲 Mobile-এ Install করো
         </a>
         <p class="file-section-title">DEPLOYED FILES</p>
         <div class="file-pills" id="filePills"></div>
@@ -499,7 +513,7 @@
 
       resultId.textContent = `ID: ${data.siteId}`;
       resultUrl.textContent = data.url;
-      openBtn.href = data.url;
+      openBtn.href = data.url; document.getElementById("installBtn").href = data.url;
 
       filePills.innerHTML = data.files
         .slice(0, 24)

@@ -1,0 +1,15 @@
+{
+  "name": "ZipHost",
+  "short_name": "ZipHost",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080810",
+  "theme_color": "#6ee7b7",
+  "icons": [
+    {
+      "src": "https://fav.farm/%E2%AC%A1",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

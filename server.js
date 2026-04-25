@@ -101,7 +101,9 @@ app.post("/upload", upload.single("zipfile"), (req, res) => {
       });
     }
 
-    const siteUrl = `http://localhost:${PORT}/sites/${siteId}/`;
+    const host = req.headers.host;
+const protocol = req.headers['x-forwarded-proto'] || 'http';
+const siteUrl = `${protocol}://${host}/sites/${siteId}/`;
 
     return res.json({
       success: true,
@@ -162,7 +164,7 @@ app.get("/api/sites", (req, res) => {
       const files = fs.readdirSync(siteDir).length;
       return {
         siteId,
-        url: `http://localhost:${PORT}/sites/${siteId}/`,
+      url: `${req.protocol}://${req.get('host')}/sites/${siteId}/`,
         createdAt: stat.birthtime,
         files,
       };
